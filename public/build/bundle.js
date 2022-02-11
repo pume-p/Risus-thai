@@ -45,6 +45,10 @@ var app = (function () {
     function space() {
         return text(' ');
     }
+    function listen(node, event, handler, options) {
+        node.addEventListener(event, handler, options);
+        return () => node.removeEventListener(event, handler, options);
+    }
     function attr(node, attribute, value) {
         if (value == null)
             node.removeAttribute(attribute);
@@ -294,6 +298,19 @@ var app = (function () {
         dispatch_dev('SvelteDOMRemove', { node });
         detach(node);
     }
+    function listen_dev(node, event, handler, options, has_prevent_default, has_stop_propagation) {
+        const modifiers = options === true ? ['capture'] : options ? Array.from(Object.keys(options)) : [];
+        if (has_prevent_default)
+            modifiers.push('preventDefault');
+        if (has_stop_propagation)
+            modifiers.push('stopPropagation');
+        dispatch_dev('SvelteDOMAddEventListener', { node, event, handler, modifiers });
+        const dispose = listen(node, event, handler, options);
+        return () => {
+            dispatch_dev('SvelteDOMRemoveEventListener', { node, event, handler, modifiers });
+            dispose();
+        };
+    }
     function attr_dev(node, attribute, value) {
         attr(node, attribute, value);
         if (value == null)
@@ -350,6 +367,15 @@ var app = (function () {
     	let t4;
     	let a;
     	let t6;
+    	let t7;
+    	let button;
+    	let t8;
+    	let t9;
+    	let t10;
+    	let t11_value = (/*count*/ ctx[1] === 1 ? 'time' : 'times') + "";
+    	let t11;
+    	let mounted;
+    	let dispose;
 
     	const block = {
     		c: function create() {
@@ -364,13 +390,20 @@ var app = (function () {
     			a = element("a");
     			a.textContent = "Svelte tutorial";
     			t6 = text(" to learn how to build Svelte apps.");
+    			t7 = space();
+    			button = element("button");
+    			t8 = text("Clicked ");
+    			t9 = text(/*count*/ ctx[1]);
+    			t10 = space();
+    			t11 = text(t11_value);
     			attr_dev(h1, "class", "svelte-1tky8bj");
-    			add_location(h1, file, 5, 1, 46);
+    			add_location(h1, file, 11, 1, 111);
     			attr_dev(a, "href", "https://svelte.dev/tutorial");
-    			add_location(a, file, 6, 14, 83);
-    			add_location(p, file, 6, 1, 70);
+    			add_location(a, file, 12, 14, 148);
+    			add_location(p, file, 12, 1, 135);
     			attr_dev(main, "class", "svelte-1tky8bj");
-    			add_location(main, file, 4, 0, 38);
+    			add_location(main, file, 10, 0, 103);
+    			add_location(button, file, 37, 0, 520);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -386,14 +419,31 @@ var app = (function () {
     			append_dev(p, t4);
     			append_dev(p, a);
     			append_dev(p, t6);
+    			insert_dev(target, t7, anchor);
+    			insert_dev(target, button, anchor);
+    			append_dev(button, t8);
+    			append_dev(button, t9);
+    			append_dev(button, t10);
+    			append_dev(button, t11);
+
+    			if (!mounted) {
+    				dispose = listen_dev(button, "click", /*incrementCount*/ ctx[2], false, false, false);
+    				mounted = true;
+    			}
     		},
     		p: function update(ctx, [dirty]) {
     			if (dirty & /*name*/ 1) set_data_dev(t1, /*name*/ ctx[0]);
+    			if (dirty & /*count*/ 2) set_data_dev(t9, /*count*/ ctx[1]);
+    			if (dirty & /*count*/ 2 && t11_value !== (t11_value = (/*count*/ ctx[1] === 1 ? 'time' : 'times') + "")) set_data_dev(t11, t11_value);
     		},
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
+    			if (detaching) detach_dev(t7);
+    			if (detaching) detach_dev(button);
+    			mounted = false;
+    			dispose();
     		}
     	};
 
@@ -412,6 +462,12 @@ var app = (function () {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
     	let { name } = $$props;
+    	let count = 0;
+
+    	function incrementCount() {
+    		$$invalidate(1, count += 1);
+    	}
+
     	const writable_props = ['name'];
 
     	Object.keys($$props).forEach(key => {
@@ -422,17 +478,18 @@ var app = (function () {
     		if ('name' in $$props) $$invalidate(0, name = $$props.name);
     	};
 
-    	$$self.$capture_state = () => ({ name });
+    	$$self.$capture_state = () => ({ name, count, incrementCount });
 
     	$$self.$inject_state = $$props => {
     		if ('name' in $$props) $$invalidate(0, name = $$props.name);
+    		if ('count' in $$props) $$invalidate(1, count = $$props.count);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [name];
+    	return [name, count, incrementCount];
     }
 
     class App extends SvelteComponentDev {
